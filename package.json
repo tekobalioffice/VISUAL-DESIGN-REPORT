@@ -1,0 +1,7 @@
+{
+  "name": "teiko-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kalender kerja, absensi foto, report WhatsApp, goals, asset cetak outlet, dan notulensi Teiko. Jalan di localhost.",
+  "scripts": { "start": "node server.js" }
+}
