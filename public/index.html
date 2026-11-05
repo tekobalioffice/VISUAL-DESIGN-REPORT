@@ -6,9 +6,11 @@
 <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Teiko Planner</title>
+<title>Planner</title>
 <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
 <style>
 /* Layout: iCloud-style web app. Translucent top bar, app sidebar with colored app icons, rounded white cards on a soft grey ground. */
 :root{
@@ -163,6 +165,8 @@ input.btn{border-radius:10px;padding:7px 12px;font-weight:400}
 pre.wa{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font);font-size:14px;line-height:1.55;background:var(--surface-2);border-radius:12px;padding:14px;margin:0;max-height:440px;overflow:auto}
 .hint{font-size:13px;color:var(--muted);margin:0}
 
+/* owner / visitor: no Report */
+body.owner [data-tab="report"],body.owner [data-act="toReport"],body.owner [data-act="absen"],body.owner [data-act="delAbs"]{display:none!important}
 /* rekap */
 .rekap{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
 .rk{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -321,6 +325,7 @@ pre.wa{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font);font-
 .sp-row{width:100%;border:0;background:transparent;color:var(--ink);text-align:left;border-radius:6px;font-size:13px;line-height:1.3}
 .sp-row:nth-of-type(even){background:color-mix(in srgb,var(--fill) 70%,transparent)}
 .sp-row:hover{background:color-mix(in srgb,var(--blue) 16%,transparent)}
+.sp-ph{width:26px;height:26px;border-radius:5px;object-fit:cover;flex:none;cursor:zoom-in;background:var(--fill)}
 .sp-n{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap}
 .sp-n .tag{flex:none;width:10px;height:10px;border-radius:50%;background:var(--t)}
 .sp-n em{font-style:normal;font-size:11.5px;color:var(--muted)}
@@ -386,6 +391,7 @@ pre.wa{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font);font-
 .stamp{text-align:center;font-size:13px;color:var(--muted);margin:16px 0}
 #nTitle{width:100%;border:0;background:transparent;font-size:28px;font-weight:700;outline:none;padding:0;margin-bottom:6px;color:var(--ink)}
 #nBody{width:100%;border:0;background:transparent;font-size:16px;line-height:1.55;resize:none;outline:none;min-height:40vh;padding:0;color:var(--ink);overflow:hidden}
+.nlinks{display:flex;flex-direction:column;gap:4px;font-size:14px;word-break:break-all}.nlinks:empty{display:none}
 .nimgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
 .nimg{position:relative}
 .nimg img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;cursor:zoom-in;background:var(--fill)}
@@ -527,7 +533,7 @@ nav.tabs .ic{transition:transform .15s}
 
 <header class="top">
   <button class="side-toggle" data-act="toggleSide" aria-label="Sembunyikan / tampilkan menu" title="Sembunyikan / tampilkan menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9 4.5v15"/></svg></button>
-  <div class="brand"><span class="mark">te</span>Teiko <em id="appName">Kalender</em></div>
+  <div class="brand"><em id="appName">Kalender</em></div>
   <button class="who" data-act="setName" id="whoBtn" title="Ganti nama">Isi nama</button>
 </header>
 <div class="shell">
@@ -605,7 +611,7 @@ nav.tabs .ic{transition:transform .15s}
   <section id="v-goals" data-view hidden>
     <div class="ios ios-mono">
       <div class="ios-top">
-        <div><p class="ios-sub" id="tlYear">Teiko 2026</p><h2 class="ios-large">Timeline</h2></div>
+        <div><p class="ios-sub" id="tlYear">2026</p><h2 class="ios-large">Timeline</h2></div>
         <div class="ios-seg"><button data-act="prevY" aria-label="Tahun sebelumnya">‹</button><span id="tlYearNum">2026</span><button data-act="nextY" aria-label="Tahun berikutnya">›</button></div>
       </div>
       <div class="ios-card ios-progress" id="tlSum"></div>
@@ -709,6 +715,7 @@ nav.tabs .ic{transition:transform .15s}
     <div class="stamp" id="nStamp"></div>
     <input id="nTitle" placeholder="Judul" autocomplete="off">
     <textarea id="nBody" placeholder="Mulai menulis…"></textarea>
+    <div class="nlinks" id="nLinks"></div>
     <div class="nimgs" id="nImgs"></div>
   </div></div>
   <div class="sheet-tools">
@@ -765,6 +772,12 @@ nav.tabs .ic{transition:transform .15s}
     <label class="field" style="flex:0 0 130px;min-width:0">Format<select id="asFmt"><option value="indoor">Indoor</option><option value="outdoor">Outdoor</option></select></label>
     <label class="field">Bahan<input id="asMat" list="dlMat" placeholder="mis. Flexi 340gr"></label>
   </div>
+  <p class="label" style="margin-top:6px">Foto lokasi (posisi asset di outlet)</p>
+  <div class="dsg">
+    <img id="asPhotoImg" alt="Foto lokasi asset" data-act="zoom" hidden>
+    <label class="btn" for="asPhotoFile" id="asPhotoBtn">Upload foto lokasi</label>
+    <input type="file" id="asPhotoFile" accept="image/*" hidden>
+  </div>
   <p class="label" style="margin-top:6px">Design pengajuan</p>
   <div class="dsg">
     <img id="asDsgImg" alt="Design pengajuan" data-act="zoom" hidden>
@@ -818,7 +831,16 @@ nav.tabs .ic{transition:transform .15s}
   <h3>Siapa yang memakai?</h3>
   <p class="hint">Nama ini ditulis di setiap catatan, pekerjaan, dan komentar yang kamu buat dari browser ini.</p>
   <label class="field">Nama<input id="whoName" required placeholder="mis. Bagas, Tim Marketing, Owner" autocomplete="name"></label>
-  <div class="dlg-actions"><button type="button" class="btn" data-close>Batal</button><button type="submit" class="btn pri">Simpan</button></div>
+  <div class="dlg-actions"><button type="button" class="btn ghost" id="logoutBtn" hidden>Keluar akun</button><button type="button" class="btn" data-close>Batal</button><button type="submit" class="btn pri">Simpan</button></div>
+</form></dialog>
+
+<dialog id="loginDlg"><form id="loginForm">
+  <h3>Masuk</h3>
+  <p class="hint">Pakai email dan password akun tim.</p>
+  <label class="field">Email<input id="loginEmail" type="email" required autocomplete="username"></label>
+  <label class="field">Password<input id="loginPass" type="password" required autocomplete="current-password"></label>
+  <p class="hint" id="loginErr" hidden>Email atau password salah.</p>
+  <div class="dlg-actions"><button type="button" class="btn" data-close>Batal</button><button type="submit" class="btn pri">Masuk</button></div>
 </form></dialog>
 
 <dialog id="newTaskDlg"><form method="dialog" id="newTaskForm">
@@ -868,7 +890,7 @@ nav.tabs .ic{transition:transform .15s}
 
 <dialog id="ppDlg" class="pp-dlg"><form method="dialog" id="ppForm">
   <div class="pp-top"><h3 id="ppHead">Pengajuan baru</h3><span class="tk-st" id="ppStatus"></span></div>
-  <label class="field">Judul kegiatan<input id="ppTitle" required placeholder="mis. Foto produk minuman Teiko"></label>
+  <label class="field">Judul kegiatan<input id="ppTitle" required placeholder="mis. Foto produk minuman"></label>
   <div class="row">
     <label class="field">Tanggal<input type="date" id="ppDate"></label>
     <label class="field">Lokasi<input id="ppLoc" list="dlOutlet" placeholder="mis. Outlet Pendidikan / studio"></label>
@@ -907,11 +929,15 @@ const hm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const tf=t=>t?t.replace(':','.'):'–';
 const parseYmd=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const longDate=s=>parseYmd(s).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-const blob=id=>'/_blob/'+id;
+const SB=window.TEIKO_SUPABASE?.url?supabase.createClient(TEIKO_SUPABASE.url,TEIKO_SUPABASE.key):null;
+const URL_RE=/https?:\/\/[^\s<]+/g,trimUrl=u=>u.replace(/[.,;:!?)\]]+$/,'');
+const linkify=s=>esc(s).replace(URL_RE,u=>{const t=trimUrl(u);return `<a href="${t}" target="_blank" rel="noopener">${t}</a>`+u.slice(t.length)});
+const blob=id=>SB?SB.storage.from('uploads').getPublicUrl(id).data.publicUrl:'/_blob/'+id;
 
 const S={events:[],goals:[],targets:[],proposals:[],comments:[],viewGoal:null,tasks:[],viewTask:null,editTask:null,tkAll:false,ty:new Date().getFullYear()+(new Date().getMonth()>=10?1:0),notes:[],passets:[],outlets:[],amode:'spec',aout:'Semua',pm:ymd(new Date()).slice(0,7),folders:[],folder:null,att:{},view:new Date(),sel:ymd(new Date()),rep:ymd(new Date()),gy:new Date().getFullYear()+(new Date().getMonth()>=10?1:0),q:''};
 S.view.setDate(1);
-let db=null,assets=null,sample=null,downloads=null,loaded=false;
+let db=null,assets=null,sample=null,downloads=null,loaded=false,viewOnly=false,ownerView=false;
+const OWNER_EMAIL='teko.balioffice1@gmail.com';
 
 function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,ms)}
 function banner(msg){const b=$('#banner');b.textContent=msg||'';b.hidden=!msg}
@@ -919,7 +945,7 @@ function fail(e){console.error(e);toast(e?.code==='invalid_argument'?'Kamu tidak
 
 /* ---------- routing ---------- */
 const TABS=['kalender','report','absensi','goals','tugas','pengajuan','asset','notulensi'];
-function curTab(){const h=location.hash.slice(1);return TABS.includes(h)?h:'kalender'}
+function curTab(){const h=location.hash.slice(1);return TABS.includes(h)&&!(ownerView&&h==='report')?h:'kalender'}
 function route(){
   const tab=curTab();
   document.querySelectorAll('[data-view]').forEach(v=>v.hidden=v.id!=='v-'+tab);
@@ -984,15 +1010,16 @@ function renderDay(){
   $('#dlPeople').innerHTML=[...new Set([me(),...S.events.map(e=>e.author),...S.comments.map(c=>c.author)].filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('');
   const k=S.sel, evs=evByDate()[k]||[], a=S.att[k]||{};
   const ed=S.editEv&&evs.find(e=>e.id===S.editEv);if(!ed)S.editEv=null;
+  if(S.evImgsFor!==(S.editEv||'new')){S.evImgsFor=S.editEv||'new';S.evImgs=[...(ed?.images||[])]}
   $('#dayPanel').innerHTML=`<div><p class="label">${parseYmd(k).toLocaleDateString('id-ID',{weekday:'long'})}</p><h3>${parseYmd(k).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</h3></div>
-  <div><p class="label">Absensi</p><div class="slots">${slotHtml('in',a.in,k)}${slotHtml('out',a.out,k)}</div></div>
+  ${ownerView?(a.in||a.out?`<div><p class="label">Absensi</p><div class="slots">${a.in?slotHtml('in',a.in,k):''}${a.out?slotHtml('out',a.out,k):''}</div></div>`:''):`<div><p class="label">Absensi</p><div class="slots">${slotHtml('in',a.in,k)}${slotHtml('out',a.out,k)}</div></div>`}
   ${(()=>{const ds=S.tasks.filter(t=>t.due===k).sort((a,b)=>a.title.localeCompare(b.title)),ps=S.proposals.filter(p=>p.date===k);
     return (ds.length?`<div><p class="label">Deadline tugas</p><ul class="evlist">${ds.map(t=>{const [sl]=TKS[tkState(t)];return `<li class="ev t-deadline ev-link" data-act="openTask" data-id="${t.id}"><span class="k">Deadline · ${sl}</span><span class="ti">${esc(t.title)}</span>${t.forMonth?`<span class="bd">Untuk ${TK[t.kind]?.[0]||'design'} · pasang ${monthLabel(t.forMonth)}</span>`:''}</li>`}).join('')}</ul></div>`:'')
       +(ps.length?`<div><p class="label">Pengajuan</p><ul class="evlist">${ps.map(p=>`<li class="ev t-proposal ev-link" data-act="openProposal" data-id="${p.id}"><span class="k">${PPS[p.status||'draft'][0]}</span><span class="ti">${esc(p.title)}</span><span class="bd">${esc([p.location,rp(ppTotal(p))].filter(Boolean).join(' · '))}</span></li>`).join('')}</ul></div>`:'')})()}
   <div><p class="label">Pekerjaan &amp; catatan</p>
     ${evs.length?`<ul class="evlist">${evs.map(e=>`<li class="ev t-${e.type}${e.id===S.editEv?' editing':''}"><span class="k">${TYPES[e.type]||e.type}</span>
       <span class="x"><button class="btn ghost" data-act="editEv" data-id="${e.id}">Edit</button><button class="btn ghost" data-act="delEv" data-id="${e.id}" aria-label="Hapus">✕</button></span>
-      <span class="ti">${esc(e.title)}</span>${e.body?`<span class="bd">${esc(e.body)}</span>`:''}${e.author?`<span class="bd by">${e.type==='note'?'Catatan dari':'oleh'} ${esc(e.author)}${e.editedBy&&e.editedBy!==e.author?` · diedit ${esc(e.editedBy)}`:''}</span>`:''}</li>`).join('')}</ul>`:`<p class="muted" style="margin:8px 0 0;font-size:14px">Belum ada. Tambah di bawah.</p>`}
+      <span class="ti">${esc(e.title)}</span>${e.body?`<span class="bd">${linkify(e.body)}</span>`:''}${e.images?.length?`<div class="nimgs">${e.images.map((id,i)=>`<div class="nimg"><img src="${blob(id)}" data-act="zoom" alt="Gambar postingan ${i+1}" loading="lazy"></div>`).join('')}</div>`:''}${e.caption?`<span class="bd"><b>Caption:</b> ${linkify(e.caption)}</span>`:''}${e.author?`<span class="bd by">${e.type==='note'?'Catatan dari':'oleh'} ${esc(e.author)}${e.editedBy&&e.editedBy!==e.author?` · diedit ${esc(e.editedBy)}`:''}</span>`:''}</li>`).join('')}</ul>`:`<p class="muted" style="margin:8px 0 0;font-size:14px">Belum ada. Tambah di bawah.</p>`}
   </div>
   <form class="addform" id="evForm">
     ${ed?'<p class="label" style="color:var(--blue)">Edit pekerjaan</p>':''}
@@ -1000,6 +1027,11 @@ function renderDay(){
     <label class="field">Judul<input id="evTitle" required placeholder="mis. Cek stok outlet PDK" value="${esc(ed?.title||'')}"></label></div>
     <label class="field" id="evAuthorWrap"${(ed?ed.type:'work')==='note'?'':' hidden'}>Catatan dari siapa?<input id="evAuthor" list="dlPeople" placeholder="mis. Pak Dwi" value="${esc(ed&&ed.type==='note'?ed.author||'':'')}"></label>
     ${ed?`<label class="field">Tanggal<input type="date" id="evDate" required value="${ed.date}"></label>`:''}
+    <div id="evPostWrap"${(ed?ed.type:'work')==='post'?'':' hidden'}>
+      <label class="field">Gambar postingan<input type="file" id="evImg" accept="image/*" multiple></label>
+      <div class="nimgs" id="evImgs">${evImgsHtml()}</div>
+      <label class="field" style="margin-top:12px">Caption<textarea id="evCaption" rows="4" placeholder="Caption Instagram">${esc(ed?.caption||'')}</textarea></label>
+    </div>
     <label class="field">Detail (opsional)<textarea id="evBody" rows="${ed?4:2}">${esc(ed?.body||'')}</textarea></label>
     <div class="row">${ed?'<button class="btn pri" type="submit">Simpan perubahan</button><button class="btn" type="button" data-act="cancelEdit">Batal</button>':'<button class="btn" type="submit">Tambah</button>'}</div>
   </form>
@@ -1024,7 +1056,7 @@ function reportText(k){
   if(gs.length){L.push('',`*Timeline visual design ${MONTHS[d.getMonth()]} ${d.getFullYear()}:*`);gs.forEach(g=>L.push(`• ${g.title} (${STATUS[g.status]||'Rencana'})`))}
   return L.join('\n');
 }
-function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src})}
+function loadImg(src){return new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src})}
 function wrapLines(ctx,text,w){const out=[];for(const para of String(text).split('\n')){let line='';for(const word of para.split(' ')){const t=line?line+' '+word:word;if(ctx.measureText(t).width>w&&line){out.push(line);line=word}else line=t}out.push(line)}return out}
 let repToken=0;
 async function renderReport(){
@@ -1108,7 +1140,7 @@ function rekapText(){
 const IOSC=['#007aff','#30b0c7','#34c759','#e0a100','#ff9500','#ff3b30','#ff2d55','#af52de','#5856d6','#a2845e','#00b3aa','#32ade6'];
 function renderGoals(){
   const y=S.gy, gs=S.goals.filter(g=>g.year===y), now=new Date();
-  $('#tlYear').textContent=`Visual design · Teiko ${y}`;$('#tlYearNum').textContent=y;
+  $('#tlYear').textContent=`Visual design · ${y}`;$('#tlYearNum').textContent=y;
   const n=gs.length, done=gs.filter(g=>g.status==='done').length, run=gs.filter(g=>g.status==='run').length;
   $('#tlSum').innerHTML=n?`<div class="top"><span><b>${done}</b> dari ${n} design selesai</span></div>
     <div class="bar"><i style="width:${done/n*100}%;background:var(--ios-ink)"></i><i style="width:${run/n*100}%;background:var(--ios-sec)"></i></div>
@@ -1308,6 +1340,7 @@ document.addEventListener('click',async ev=>{
   else if(act==='newTarget')openTarget(null);
   else if(act==='openTarget')openTarget(t.dataset.id);
   else if(act==='setName')askName();
+  else if(act==='login')login();
   else if(act==='toggleSide'){const h=document.body.classList.toggle('side-hidden');try{localStorage.setItem('teikoSide',h?'hidden':'')}catch{}}
   else if(act==='delComment'){if(t.dataset.confirm!=='1'){t.dataset.confirm='1';t.textContent='Hapus?';return}try{await db.doc('comments/'+t.dataset.id).delete()}catch(e){fail(e)}}
   else if(act==='newNote'){if(!db){toast('Data belum terhubung.');return}openNote(db.collection('notes').doc().id,true)}
@@ -1333,7 +1366,17 @@ document.addEventListener('click',async ev=>{
     if(!downloads){toast('Klik kanan gambar, lalu Simpan gambar.');return}
     try{await downloads.save({filename:`report-teiko-${S.rep}.png`,data:await canvasBlob()})}catch(e){if(e?.code!=='declined'&&e?.code!=='cancelled')toast('Gagal menyimpan gambar.')}}
 });
-document.addEventListener('change',e=>{if(e.target.id==='evType'){const n=e.target.value==='note';$('#evAuthorWrap').hidden=!n;if(n)$('#evAuthor').focus()}});
+document.addEventListener('change',e=>{if(e.target.id==='evType'){const n=e.target.value==='note';$('#evAuthorWrap').hidden=!n;$('#evPostWrap').hidden=e.target.value!=='post';if(n)$('#evAuthor').focus()}});
+function evImgsHtml(){return (S.evImgs||[]).map((id,i)=>`<div class="nimg"><img src="${blob(id)}" data-act="zoom" alt="Gambar ${i+1}"><button type="button" data-i="${i}" class="rmEvImg" aria-label="Hapus gambar">×</button></div>`).join('')}
+document.addEventListener('click',e=>{const b=e.target.closest('.rmEvImg');if(!b)return;S.evImgs.splice(+b.dataset.i,1);$('#evImgs').innerHTML=evImgsHtml()});
+document.addEventListener('change',async e=>{
+  if(e.target.id!=='evImg')return;
+  const files=[...e.target.files];e.target.value='';if(!files.length)return;
+  if(!assets){toast('Data belum terhubung.');return}
+  toast('Mengunggah gambar…');
+  for(const f of files){try{const b=await shrink(f,2000);S.evImgs.push((await assets.upload(b,{type:'image/jpeg'})).id);$('#evImgs').innerHTML=evImgsHtml()}catch(err){toast(err?.code==='too_large'?'Gambar terlalu besar.':'Gagal mengunggah gambar.')}}
+  toast('Gambar siap. Klik Tambah/Simpan untuk menyimpan.');
+});
 $('#repDate').addEventListener('change',e=>{if(e.target.value){S.rep=e.target.value;renderReport()}});
 
 document.addEventListener('submit',async ev=>{
@@ -1344,10 +1387,11 @@ document.addEventListener('submit',async ev=>{
   const author=isNote?$('#evAuthor').value.trim():(S.editEv&&S.events.find(e=>e.id===S.editEv)?.author)||me();
   if(isNote&&!author){toast('Isi dulu catatan ini dari siapa.');$('#evAuthor').focus();return}
   const data={type:$('#evType').value,title,body:$('#evBody').value.trim(),author};
+  if(data.type==='post'){data.images=[...(S.evImgs||[])];data.caption=$('#evCaption').value.trim()}
   try{
     if(S.editEv){const old=S.events.find(e=>e.id===S.editEv)||{};const {id,...rest}=old;const date=$('#evDate').value||old.date;
       await db.doc('events/'+S.editEv).set({...rest,...data,date,editedBy:me()||author,editedAt:Date.now()});S.editEv=null;S.sel=date;render();toast('Perubahan tersimpan')}
-    else{await db.collection('events').add({date:S.sel,...data,createdAt:Date.now()});toast('Tersimpan')}
+    else{await db.collection('events').add({date:S.sel,...data,createdAt:Date.now()});S.evImgs=[];renderDay();toast('Tersimpan')}
   }catch(e){fail(e)}
 });
 $('#nSearch').addEventListener('input',e=>{S.q=e.target.value;renderNotes()});
@@ -1356,7 +1400,7 @@ $('#nSearch').addEventListener('input',e=>{S.q=e.target.value;renderNotes()});
 let goalId=null;
 function cmtHtml(ref){
   const cs=S.comments.filter(c=>c.goalId===ref).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-  return cs.length?cs.map(c=>`<li><div class="cmt-h"><b>${esc(c.author||'Tanpa nama')}</b><time>${new Date(c.createdAt).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time><button type="button" class="btn ghost" data-act="delComment" data-id="${c.id}">Hapus</button></div><p>${esc(c.text)}</p></li>`).join(''):'<li class="muted">Belum ada komentar.</li>';
+  return cs.length?cs.map(c=>`<li><div class="cmt-h"><b>${esc(c.author||'Tanpa nama')}</b><time>${new Date(c.createdAt).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time><button type="button" class="btn ghost" data-act="delComment" data-id="${c.id}">Hapus</button></div><p>${linkify(c.text)}</p></li>`).join(''):'<li class="muted">Belum ada komentar.</li>';
 }
 function renderComments(){
   if(ppId&&$('#ppDlg').open)renderPpComments();
@@ -1369,14 +1413,14 @@ $('#tgForm').addEventListener('submit',async()=>{if(!db)return;
   try{tgId?await db.doc('targets/'+tgId).set(d):await db.collection('targets').add(d)}catch(e){fail(e)}});
 $('#tgDel').addEventListener('click',async e=>{const b=e.currentTarget;if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='Yakin hapus?';return}
   $('#tgDlg').close();try{await db.doc('targets/'+tgId).delete()}catch(err){fail(err)}});
-function me(){try{return localStorage.getItem('teikoName')||''}catch{return ''}}
-function showMe(){const n=me(),b=$('#whoBtn');b.textContent=n||'Isi nama';b.dataset.initial=(n||'?').trim().charAt(0).toUpperCase();$('#cmName').value=n}
-function askName(){$('#whoName').value=me();$('#nameDlg').showModal()}
+function me(){if(ownerView)return 'Owner';try{return localStorage.getItem('teikoName')||''}catch{return ''}}
+function showMe(){const n=me(),b=$('#whoBtn');if(viewOnly){b.textContent='Masuk';b.dataset.act='login';b.title='Masuk untuk mengubah data';b.dataset.initial='→';return}$('#cmName').readOnly=ownerView;b.textContent=n||'Isi nama';b.dataset.initial=(n||'?').trim().charAt(0).toUpperCase();$('#cmName').value=n}
+function askName(){$('#whoName').value=me();$('#whoName').readOnly=ownerView;$('#nameDlg').showModal()}
 $('#nameForm').addEventListener('submit',()=>{const n=$('#whoName').value.trim();if(!n)return;try{localStorage.setItem('teikoName',n)}catch{}showMe();toast('Halo, '+n)});
 showMe();
 $('#goalView').addEventListener('close',()=>{S.viewGoal=null});
 $('#cmSend').addEventListener('click',async()=>{
-  const text=$('#cmText').value.trim(),author=$('#cmName').value.trim();
+  const text=$('#cmText').value.trim(),author=ownerView?'Owner':$('#cmName').value.trim();
   if(!text){$('#cmText').focus();return}
   if(!author){toast('Isi nama dulu supaya terlihat siapa yang berkomentar.');$('#cmName').focus();return}
   try{localStorage.setItem('teikoName',author)}catch{}showMe();
@@ -1415,7 +1459,7 @@ function nextDue(a){
 }
 const REMIND_DAYS=30;
 const intervalText=a=>a.unit==='menu'?'ganti saat menu baru':`tiap ${String(+a.n||1).replace('.',',')} ${UNIT[a.unit]||'bulan'}`;
-// Default replacement schedule per print type (Teiko rule set)
+// Default replacement schedule per print type (default rule set)
 function ruleFor(kind,fmt){
   const k=(kind||'').toLowerCase();
   if(k.includes('box display')||k.includes('menu meja'))return {unit:'menu'};
@@ -1473,7 +1517,7 @@ function renderSpecs(){
     const meta=S.outlets.find(x=>x.name===o);
     return `<div class="sp-card"><div class="sp-head"><b>${esc(o)}</b><small>${xs.length}${meta?.note?' · '+esc(meta.note):''}</small><button class="ios-link" data-act="addAssetFor" data-o="${esc(o)}">+ Item</button></div>
       ${xs.length?`<div class="sp-th"><span>Nama</span><span>Format</span><span>Ukuran</span></div>`+xs.map(a=>`<button class="sp-row" data-act="editAsset" data-id="${a.id}" title="${esc([a.kind,a.material,a.note].filter(Boolean).join(' · '))}">
-        <span class="sp-n"><i class="tag" style="--t:${tagColor(a)}"></i>${esc(a.name)}${(a.qty||1)>1?` <em>×${a.qty}</em>`:''}${a.plan?` <em class="${a.installed?'ok':'wait'}">${a.installed?'✓':'•'} ${MSHORT[+a.plan.slice(5,7)-1]}</em>`:''}</span>
+        <span class="sp-n"><i class="tag" style="--t:${tagColor(a)}"></i>${a.photo?`<img class="sp-ph" src="${blob(a.photo)}" data-act="zoom" alt="Foto lokasi ${esc(a.name)}" title="Lihat foto lokasi" loading="lazy">`:''}${esc(a.name)}${(a.qty||1)>1?` <em>×${a.qty}</em>`:''}${a.plan?` <em class="${a.installed?'ok':'wait'}">${a.installed?'✓':'•'} ${MSHORT[+a.plan.slice(5,7)-1]}</em>`:''}</span>
         <i class="fmt ${a.fmt==='outdoor'?'outdoor':'indoor'}">${a.fmt==='outdoor'?'Out':'In'}</i>
         <span class="sp-s">${fmtSize(a)}</span></button>`).join(''):'<p class="sp-empty">Belum ada item.</p>'}</div>`}).join('')}</div>`
     :`<div class="ios-card ios-empty" style="margin-top:16px">Belum ada daftar ukuran. Tambahkan banner, akrilik A4/A5, kalender, box display, display akrilik dinding, atau banner dinding untuk tiap outlet.<br><br><button class="btn pri" data-act="addAsset">+ Asset baru</button></div>`;
@@ -1514,8 +1558,17 @@ $('#asDsgFile').addEventListener('change',async e=>{
   catch(err){toast(err?.code==='too_large'?'Gambar terlalu besar.':'Gagal mengunggah design.')}
   $('#asDsgBtn').textContent=dsgId?'Ganti design':'Upload design';
 });
+let photoId=null;
+$('#asPhotoFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(!assets){toast('Upload foto butuh akses editor.');return}
+  $('#asPhotoBtn').textContent='Mengunggah…';
+  try{photoId=(await assets.upload(await shrink(f,2000),{type:'image/jpeg'})).id;const im=$('#asPhotoImg');im.src=blob(photoId);im.hidden=false}
+  catch(err){toast(err?.code==='too_large'?'Gambar terlalu besar.':'Gagal mengunggah foto.')}
+  $('#asPhotoBtn').textContent=photoId?'Ganti foto lokasi':'Upload foto lokasi';
+});
 let assetId=null;
-function formAsset(){return {name:$('#asName').value.trim(),outlet:$('#asOutlet').value.trim(),kind:$('#asKind').value.trim(),last:$('#asLast').value,n:Math.max(0.5,Math.round((+$('#asN').value||1)*2)/2),unit:$('#asUnit').value,note:$('#asNote').value.trim(),w:+$('#asW').value||null,h:+$('#asH').value||null,qty:Math.max(1,Math.round(+$('#asQty').value)||1),fmt:$('#asFmt').value,material:$('#asMat').value.trim(),design:dsgId||null,plan:$('#asPlan').value||null,installed:$('#asInst').value==='1'}}
+function formAsset(){return {name:$('#asName').value.trim(),outlet:$('#asOutlet').value.trim(),kind:$('#asKind').value.trim(),last:$('#asLast').value,n:Math.max(0.5,Math.round((+$('#asN').value||1)*2)/2),unit:$('#asUnit').value,note:$('#asNote').value.trim(),w:+$('#asW').value||null,h:+$('#asH').value||null,qty:Math.max(1,Math.round(+$('#asQty').value)||1),fmt:$('#asFmt').value,material:$('#asMat').value.trim(),design:dsgId||null,photo:photoId||null,plan:$('#asPlan').value||null,installed:$('#asInst').value==='1'}}
 function updAssetPreview(){
   const f=formAsset(),g=$('#asGcal');
   $('#asN').disabled=f.unit==='menu';
@@ -1523,7 +1576,7 @@ function updAssetPreview(){
   const due=nextDue(f);
   if(!due){$('#asNext').textContent='Diganti saat ada menu baru. Catat tanggal launching sebagai "Hal baru" di kalender; pengingat muncul 1 bulan sebelumnya.';g.hidden=true;return}$('#asNext').textContent=`Jadwal ganti berikutnya: ${longDate(due)} (${leftText(daysTo(due))})`;
   const end=parseYmd(due);end.setDate(end.getDate()+1);
-  g.href=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Ganti '+(f.name||'asset')+(f.outlet?' – '+f.outlet:''))}&dates=${due.replace(/-/g,'')}/${ymd(end).replace(/-/g,'')}&details=${encodeURIComponent([f.kind,f.note,'Teiko Planner'].filter(Boolean).join('. '))}`;
+  g.href=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Ganti '+(f.name||'asset')+(f.outlet?' – '+f.outlet:''))}&dates=${due.replace(/-/g,'')}/${ymd(end).replace(/-/g,'')}&details=${encodeURIComponent([f.kind,f.note].filter(Boolean).join('. '))}`;
   g.hidden=true;
 }
 function openAsset(id,forOutlet){
@@ -1533,6 +1586,7 @@ function openAsset(id,forOutlet){
   $('#asN').value=a.n||3;$('#asUnit').value=a.unit||'m';$('#asNote').value=a.note||'';
   $('#asW').value=a.w??'';$('#asH').value=a.h??'';$('#asQty').value=a.qty||1;$('#asFmt').value=a.fmt||'indoor';$('#asMat').value=a.material||'';
   $('#asPlan').value=a.plan||(S.amode==='plan'?S.pm:'');$('#asInst').value=a.installed?'1':'0';
+  photoId=a.photo||null;{const im=$('#asPhotoImg');im.hidden=!photoId;if(photoId)im.src=blob(photoId);$('#asPhotoBtn').textContent=photoId?'Ganti foto lokasi':'Upload foto lokasi'}
   dsgId=a.design||null;{const im=$('#asDsgImg');im.hidden=!dsgId;if(dsgId)im.src=blob(dsgId);$('#asDsgBtn').textContent=dsgId?'Ganti design':'Upload design'}
   $('#asHist').textContent=a.history?.length?'Riwayat ganti: '+[...a.history].reverse().map(shortD).join(', '):'';
   $('#dlOutlet').innerHTML=outletNames().filter(o=>o!=='Tanpa outlet').map(o=>`<option value="${esc(o)}">`).join('');
@@ -1614,7 +1668,7 @@ function fillTask(){
   const [kl,kc]=TK[t.kind]||['Design','var(--blue)'],st=tkState(t),[sl,sc]=TKS[st],need=t.need||1,files=t.files||[];
   $('#tkKind').textContent=kl+(t.forMonth?' · pasang '+monthLabel(t.forMonth):'');$('#tkTitle').textContent=t.title;
   $('#tkDue').innerHTML=`<span class="tk-st" style="--s:${sc}">${sl}</span> ${esc(dueText(t))}${t.submittedBy?` · dikumpulkan ${esc(t.submittedBy)}`:''}${t.approvedBy?` · disetujui ${esc(t.approvedBy)}`:''}`;
-  $('#tkDesc').textContent=t.desc||'';
+  $('#tkDesc').innerHTML=linkify(t.desc||'');
   if(document.activeElement!==$('#tkDueInput'))$('#tkDueInput').value=t.due;
   $('#tkCount').textContent=`(${files.length}/${need}${t.max&&t.max>need?'–'+t.max:''})`;
   $('#tkFiles').innerHTML=files.length?files.map((f,i)=>`<div class="tk-file">${f.type==='application/pdf'?`<a href="${blob(f.id)}" target="_blank" rel="noopener" class="tk-pdf">PDF<small>${esc(f.name||'')}</small></a>`:`<img src="${blob(f.id)}" data-act="zoom" alt="Design ${i+1}">`}<button type="button" data-act="tkDelFile" data-i="${i}" aria-label="Hapus design">×</button></div>`).join(''):'<p class="muted" style="margin:0;font-size:14px">Belum ada design yang diupload.</p>';
@@ -1661,7 +1715,7 @@ $('#tkCmSend').addEventListener('click',async()=>{
 
 /* ---------- pengajuan (budget requests) ---------- */
 const PPS={draft:['Draf','var(--muted)'],submitted:['Menunggu persetujuan','var(--warn)'],approved:['Disetujui','var(--ok)'],rejected:['Ditolak','var(--danger)']};
-const PP_QUICK=['Sewa kamera','Sewa lighting','Foto minuman Teiko','Fotografer','Model / talent','Properti','Transport','Konsumsi'];
+const PP_QUICK=['Sewa kamera','Sewa lighting','Foto produk','Fotografer','Model / talent','Properti','Transport','Konsumsi'];
 const rp=n=>'Rp '+Math.round(n||0).toLocaleString('id-ID');
 const num=v=>+String(v??'').replace(/[^\d]/g,'')||0;
 const ppTotal=p=>(p.items||[]).reduce((t,i)=>t+(+i.qty||1)*num(i.price),0);
@@ -1705,7 +1759,7 @@ function renderPpActions(){
 }
 function openProposal(id){
   ppId=id;const p=S.proposals.find(x=>x.id===id);
-  ppDraft=p?JSON.parse(JSON.stringify(p)):{status:'draft',items:[{name:'Sewa kamera',qty:1,price:0},{name:'Sewa lighting',qty:1,price:0},{name:'Foto minuman Teiko',qty:1,price:0}]};
+  ppDraft=p?JSON.parse(JSON.stringify(p)):{status:'draft',items:[{name:'Sewa kamera',qty:1,price:0},{name:'Sewa lighting',qty:1,price:0},{name:'Foto produk',qty:1,price:0}]};
   delete ppDraft.id;
   $('#ppHead').textContent=p?'Pengajuan':'Pengajuan baru';$('#ppTitle').value=ppDraft.title||'';$('#ppDate').value=ppDraft.date||'';$('#ppLoc').value=ppDraft.location||'';$('#ppNote').value=ppDraft.note||'';
   $('#dlOutlet').innerHTML=outletNames().filter(o=>o!=='Tanpa outlet').map(o=>`<option value="${esc(o)}">`).join('');
@@ -1851,6 +1905,8 @@ $('#absForm').addEventListener('submit',async e=>{
 /* ---------- notes sheet ---------- */
 let noteId=null,noteFolder=null,noteAuthor='',noteCreated=0,noteImgs=[],noteTimer=null,saveChain=Promise.resolve();
 const grow=()=>{const b=$('#nBody');b.style.height='auto';b.style.height=b.scrollHeight+'px'};
+function renderNoteLinks(){const ls=[...new Set($('#nBody').value.match(URL_RE)||[])].map(trimUrl);$('#nLinks').innerHTML=ls.length?'<p class="label" style="margin:0">Link di catatan</p>'+ls.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a>`).join(''):''}
+$('#nBody').addEventListener('input',renderNoteLinks);
 function openNote(id,isNew){
   const n=S.notes.find(x=>x.id===id)||{};
   noteId=id;noteFolder=n.folderId||S.folder||null;noteCreated=n.createdAt||Date.now();noteAuthor=n.author||me();
@@ -1858,7 +1914,7 @@ function openNote(id,isNew){
   $('#nBack').textContent=S.folders.find(f=>f.id===noteFolder)?.title||'Notulensi';noteImgs=[...(n.images||[])];
   $('#nTitle').value=n.title||'';$('#nBody').value=n.body||'';
   $('#nStamp').textContent=new Date(n.updatedAt||Date.now()).toLocaleString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+(noteAuthor?` · oleh ${noteAuthor}`:'')+(n.editedBy&&n.editedBy!==noteAuthor?` · terakhir diedit ${n.editedBy}`:'');
-  $('#savedState').textContent='';renderNoteImgs();$('#sheet').hidden=false;grow();
+  $('#savedState').textContent='';renderNoteImgs();renderNoteLinks();$('#sheet').hidden=false;grow();
   (isNew?$('#nTitle'):$('#nBody')).focus();
 }
 function renderNoteImgs(){$('#nImgs').innerHTML=noteImgs.map((id,i)=>`<div class="nimg"><img src="${blob(id)}" data-act="zoom" alt="Gambar ${i+1}"><button data-i="${i}" class="rmimg" aria-label="Hapus gambar">×</button></div>`).join('')}
@@ -1901,26 +1957,88 @@ const api=async(method,url,data)=>{
 };
 const listeners={};
 const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+// Supabase (online) when config.js has a url, otherwise the local server.
+const sbOk=e=>{if(e){console.error(e);throw {code:e.code==='42501'?'invalid_argument':'unavailable'}}};
+const store=SB?{
+  // ponytail: one select per collection (PostgREST caps at 1000 rows); paginate if a collection grows past that
+  list:async col=>{const {data,error}=await SB.from('docs').select('id,data').eq('col',col).limit(1000);sbOk(error);return data.map(r=>({...r.data,id:r.id}))},
+  put:async(col,id,d)=>{d={...d};delete d.id;const {error}=await SB.from('docs').upsert({col,id,data:d,updated_at:new Date().toISOString()},{onConflict:'col,id'});sbOk(error)},
+  patch:async(col,id,d)=>{const {data:r,error}=await SB.from('docs').select('data').eq('col',col).eq('id',id).maybeSingle();sbOk(error);if(!r)throw {code:'invalid_argument'};await store.put(col,id,{...r.data,...d})},
+  del:async(col,id)=>{if(col==='tasks'&&id.startsWith('tk-hol-'))await store.put('_dismissed',id,{});const {error}=await SB.from('docs').delete().eq('col',col).eq('id',id);sbOk(error)}
+}:{
+  list:col=>api('GET','/api/'+col),
+  put:(col,id,d)=>api('PUT',`/api/${col}/${id}`,d),
+  patch:(col,id,d)=>api('PATCH',`/api/${col}/${id}`,d),
+  del:(col,id)=>api('DELETE',`/api/${col}/${id}`)
+};
 async function refresh(col){
-  try{const docs=await api('GET','/api/'+col);const snap={docs:docs.map(({id,...d})=>({id,data:()=>d})),metadata:{fromCache:false}};(listeners[col]||[]).forEach(l=>l.fn(snap))}
-  catch(e){(listeners[col]||[]).forEach(l=>l.err&&l.err(e))}
+  if(!listeners[col])return;
+  try{const docs=await store.list(col);const snap={docs:docs.map(({id,...d})=>({id,data:()=>d})),metadata:{fromCache:false}};listeners[col].forEach(l=>l.fn(snap))}
+  catch(e){listeners[col].forEach(l=>l.err&&l.err(e))}
 }
 function docRef(path){
   const [col,id]=path.split('/');
   return {id,path,
-    set:d=>api('PUT',`/api/${col}/${id}`,d).then(()=>refresh(col)),
-    update:d=>api('PATCH',`/api/${col}/${id}`,d).then(()=>refresh(col)),
-    delete:()=>api('DELETE',`/api/${col}/${id}`).then(()=>refresh(col))};
+    set:d=>store.put(col,id,d).then(()=>refresh(col)),
+    update:d=>store.patch(col,id,d).then(()=>refresh(col)),
+    delete:()=>store.del(col,id).then(()=>refresh(col))};
 }
 db={doc:docRef,collection:col=>({
   doc:id=>docRef(col+'/'+(id||rid())),
   add:async d=>{const r=docRef(col+'/'+rid());await r.set(d);return r},
   onSnapshot:(fn,err)=>{(listeners[col]??=[]).push({fn,err});refresh(col);return()=>{}}})};
-assets={upload:async(b,o)=>{const r=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':(o&&o.type)||b.type},body:b});if(!r.ok)throw {code:r.status===413?'too_large':'upstream_error'};return r.json()}};
+const EXT={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','application/pdf':'.pdf'};
+assets={upload:SB?async(b,o)=>{
+  const type=(o&&o.type)||b.type,ext=EXT[type];if(!ext)throw {code:'upstream_error'};if(b.size>20*1024*1024)throw {code:'too_large'};
+  const id=[...crypto.getRandomValues(new Uint8Array(12))].map(x=>x.toString(16).padStart(2,'0')).join('')+ext;
+  const {error}=await SB.storage.from('uploads').upload(id,b,{contentType:type,cacheControl:'31536000'});if(error){console.error(error);throw {code:'upstream_error'}}
+  return {id,url:blob(id),sizeBytes:b.size};
+}:async(b,o)=>{const r=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':(o&&o.type)||b.type},body:b});if(!r.ok)throw {code:r.status===413?'too_large':'upstream_error'};return r.json()}};
 downloads={save:async({filename,data})=>{const a=document.createElement('a');a.href=URL.createObjectURL(data);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}};
 sample=null;
-new EventSource('/sse').onmessage=e=>refresh(e.data);
-setTimeout(()=>{if(!loaded)banner('Server lokal belum menjawab. Pastikan "node server.js" masih jalan.')},5000);
+
+// national holidays + story tasks; the local server does this itself, online the first browser of the day does it
+async function syncHolidays(){
+  try{if(localStorage.getItem('teikoHolSync')===ymd(new Date()))return}catch{}
+  const h=await (await fetch('/api/holidays')).json();if(!h.events)return;
+  const by=a=>Object.fromEntries(a.map(x=>[x.id,x]));
+  const ev=by(await store.list('events')),tasks=by(await store.list('tasks')),gone=new Set((await store.list('_dismissed')).map(x=>x.id)),keep=new Set(h.events.map(e=>e.id));
+  for(const e of h.events)if(ev[e.id]?.title!==e.title)await store.put('events',e.id,{date:e.date,type:'holiday',title:e.title,body:'',auto:true,createdAt:0});
+  for(const k in ev){const y=/^gh-(\d{4})/.exec(k);if((y&&h.years.includes(y[1])&&!keep.has(k))||/^h\d{4}-\d{4}$/.test(k))await store.del('events',k)}
+  for(const x of h.tasks){
+    const id=x.baseId+'-story',cur=tasks[id],f=x.doc;
+    if(gone.has(id))continue;
+    if(!cur)await store.put('tasks',id,f);
+    else if(cur.status==='open'&&(cur.holidayDate!==x.date||cur.title!==f.title))await store.patch('tasks',id,{title:f.title,due:f.due,forMonth:f.forMonth,holidayDate:f.holidayDate,desc:f.desc});
+  }
+  try{localStorage.setItem('teikoHolSync',ymd(new Date()))}catch{}
+  refresh('events');refresh('tasks');
+}
+
+// without login the page is view-only (the database only shows progress collections to visitors)
+function login(){$('#loginErr').hidden=true;$('#loginDlg').showModal();$('#loginEmail').focus()}
+$('#loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();$('#loginErr').hidden=true;
+  const {error}=await SB.auth.signInWithPassword({email:$('#loginEmail').value.trim(),password:$('#loginPass').value});
+  if(error){$('#loginErr').hidden=false;return}
+  location.reload();
+});
+(async()=>{
+if(SB){
+  const session=(await SB.auth.getSession()).data.session;viewOnly=!session;showMe();
+  if(viewOnly){$('#loginDlg [data-close]').hidden=true;$('#loginDlg').addEventListener('cancel',e=>e.preventDefault());login();return}
+  if(session.user.email===OWNER_EMAIL){ownerView=true;document.body.classList.add('owner');route();showMe()}
+  $('#logoutBtn').hidden=viewOnly;
+  $('#logoutBtn').addEventListener('click',async()=>{
+    // local sign-out needs no network, so it works on a slow phone connection too
+    try{await SB.auth.signOut({scope:'local'})}catch{}
+    try{Object.keys(localStorage).filter(k=>k.startsWith('sb-')).forEach(k=>localStorage.removeItem(k))}catch{}
+    location.replace(location.pathname);
+  });
+  SB.channel('docs').on('postgres_changes',{event:'*',schema:'public',table:'docs'},p=>refresh((p.new&&p.new.col)||(p.old&&p.old.col))).subscribe();
+  if(!viewOnly)syncHolidays().catch(e=>console.warn('Libur nasional belum bisa diambil',e));
+}else new EventSource('/sse').onmessage=e=>refresh(e.data);
+setTimeout(()=>{if(!loaded)banner(SB?'Data belum termuat. Cek koneksi internet lalu muat ulang.':'Server lokal belum menjawab. Pastikan "node server.js" masih jalan.')},8000);
 sub('events',v=>S.events=v);
 sub('goals',v=>S.goals=v);
 sub('targets',v=>S.targets=v);
@@ -1932,6 +2050,7 @@ sub('printAssets',v=>S.passets=v);
 sub('folders',v=>S.folders=v);
 sub('notes',v=>S.notes=v);
 sub('attendance',v=>{S.att={};for(const a of v)S.att[a.id]={...a,date:a.date||a.id}});
+})();
 </script>
 
 </body>
