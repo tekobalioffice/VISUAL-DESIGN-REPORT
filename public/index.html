@@ -1999,7 +1999,7 @@ sample=null;
 
 // national holidays + story tasks; the local server does this itself, online the first browser of the day does it
 async function syncHolidays(){
-  try{if(localStorage.getItem('teikoHolSync2')===ymd(new Date()))return}catch{}
+  try{if(localStorage.getItem('teikoHolSync3')===ymd(new Date()))return}catch{}
   const h=await (await fetch('/api/holidays')).json();if(!h.events)return;
   const by=a=>Object.fromEntries(a.map(x=>[x.id,x]));
   const ev=by(await store.list('events')),tasks=by(await store.list('tasks')),gone=new Set((await store.list('_dismissed')).map(x=>x.id)),keep=new Set(h.events.map(e=>e.id));
@@ -2011,7 +2011,7 @@ async function syncHolidays(){
     if(!cur)await store.put('tasks',id,f);
     else if(cur.status==='open'&&(cur.holidayDate!==x.date||cur.title!==f.title))await store.patch('tasks',id,{title:f.title,due:f.due,forMonth:f.forMonth,holidayDate:f.holidayDate,desc:f.desc});
   }
-  try{localStorage.setItem('teikoHolSync2',ymd(new Date()))}catch{}
+  try{localStorage.setItem('teikoHolSync3',ymd(new Date()))}catch{}
   refresh('events');refresh('tasks');
 }
 
