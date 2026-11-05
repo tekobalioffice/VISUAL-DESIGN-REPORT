@@ -18,7 +18,7 @@
   --line:rgba(0,0,0,.08); --line-2:rgba(0,0,0,.15); --fill:rgba(118,118,128,.12); --hover:rgba(0,0,0,.04);
   --blue:#0071e3; --accent:var(--blue); --accent-ink:#ffffff; --app:#ff3b30;
   --ok:#34c759; --warn:#ff9500; --danger:#ff3b30; --yellow:#e0a100;
-  --t-work:#0071e3; --t-note:#8e8e93; --t-post:#af52de; --t-launch:#ff9500; --t-holiday:#ff3b30; --t-asset:#ff9500;
+  --t-work:#0071e3; --t-note:#8e8e93; --t-post:#af52de; --t-launch:#ff9500; --t-holiday:#ff3b30; --t-day:#ff2d55; --t-asset:#ff9500;
   --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   --ios-font:var(--font); --ios-bg:var(--bg); --ios-card:var(--surface); --ios-ink:var(--ink); --ios-sec:var(--muted);
@@ -29,7 +29,7 @@
   --bg:#000000; --side:#161618; --surface:#1c1c1e; --surface-2:#2c2c2e; --ink:#f5f5f7; --muted:#98989d;
   --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.16); --fill:rgba(118,118,128,.24); --hover:rgba(255,255,255,.05);
   --blue:#0a84ff; --ok:#30d158; --warn:#ff9f0a; --danger:#ff453a; --yellow:#ffd60a;
-  --t-work:#0a84ff; --t-note:#98989d; --t-post:#bf5af2; --t-launch:#ff9f0a; --t-holiday:#ff453a; --t-asset:#ff9f0a;
+  --t-work:#0a84ff; --t-note:#98989d; --t-post:#bf5af2; --t-launch:#ff9f0a; --t-holiday:#ff453a; --t-day:#ff375f; --t-asset:#ff9f0a;
   --shadow:0 0 0 1px rgba(255,255,255,.06); color-scheme:dark}}
 body[data-app="kalender"]{--app:#ff3b30} body[data-app="report"]{--app:#0071e3} body[data-app="absensi"]{--app:#34c759}
 body[data-app="goals"]{--app:#af52de} body[data-app="asset"]{--app:#ff9500} body[data-app="notulensi"]{--app:#e0a100} body[data-app="tugas"]{--app:#5856d6} body[data-app="pengajuan"]{--app:#30b0c7}
@@ -113,7 +113,7 @@ input.btn{border-radius:10px;padding:7px 12px;font-weight:400}
 .cell.today.hol .dn b{color:#fff}
 .chips{display:flex;flex-direction:column;gap:2px;min-width:0}
 .chip{font-size:11.5px;line-height:1.35;padding:1px 6px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--ink)}
-.t-work{--c:var(--t-work)} .t-note{--c:var(--t-note)} .t-post{--c:var(--t-post)} .t-holiday{--c:var(--t-holiday)} .t-launch{--c:var(--t-launch)} .t-asset{--c:var(--t-asset)}
+.t-work{--c:var(--t-work)} .t-note{--c:var(--t-note)} .t-post{--c:var(--t-post)} .t-holiday{--c:var(--t-holiday)} .t-day{--c:var(--t-day)} .t-launch{--c:var(--t-launch)} .t-asset{--c:var(--t-asset)}
 .att-mini{margin-top:auto;font-size:11px;font-weight:600;color:var(--ok);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .more{font-size:11px;color:var(--muted);padding-left:6px}
 @media (max-width:600px){
@@ -561,7 +561,7 @@ nav.tabs .ic{transition:transform .15s}
         </div>
         <div class="legend">
           <span style="--c:var(--t-work)">Pekerjaan</span><span style="--c:var(--t-note)">Catatan</span><span style="--c:var(--t-post)">Postingan</span>
-          <span style="--c:var(--t-launch)">Hal baru</span><span style="--c:var(--t-holiday)">Hari raya</span><span style="--c:#5856d6">Deadline design</span><span style="--c:#30b0c7">Pengajuan</span>
+          <span style="--c:var(--t-launch)">Hal baru</span><span style="--c:var(--t-holiday)">Hari raya</span><span style="--c:var(--t-day)">Peringatan</span><span style="--c:#5856d6">Deadline design</span><span style="--c:#30b0c7">Pengajuan</span>
         </div>
         <div id="calNotice"></div>
         <div class="tg-row" id="tgRow"></div>
@@ -918,7 +918,7 @@ nav.tabs .ic{transition:transform .15s}
 <script>
 const MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const MSHORT=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-const TYPES={work:'Pekerjaan',note:'Catatan',post:'Postingan',launch:'Hal baru',holiday:'Hari raya'};
+const TYPES={work:'Pekerjaan',note:'Catatan',post:'Postingan',launch:'Hal baru',holiday:'Hari raya',day:'Peringatan'};
 const STATUS={plan:'Rencana',run:'Berjalan',done:'Selesai'};
 
 const $=(s,el=document)=>el.querySelector(s);
@@ -956,7 +956,7 @@ function route(){
 addEventListener('hashchange',route);
 
 /* ---------- shared data helpers ---------- */
-function evByDate(){const m={};for(const e of S.events)(m[e.date]??=[]).push(e);for(const k in m)m[k].sort((a,b)=>(a.type==='holiday'?-1:0)-(b.type==='holiday'?-1:0)||(a.createdAt||0)-(b.createdAt||0));return m}
+function evByDate(){const m={};for(const e of S.events)(m[e.date]??=[]).push(e);for(const k in m)m[k].sort((a,b)=>(/^(holiday|day)$/.test(a.type)?-1:0)-(/^(holiday|day)$/.test(b.type)?-1:0)||(a.createdAt||0)-(b.createdAt||0));return m}
 const goalsOf=(y,m)=>S.goals.filter(g=>g.year===y&&g.month===m).sort((a,b)=>(a.order||0)-(b.order||0));
 const workLine=e=>(e.type==='post'?'Postingan: ':e.type==='launch'?'Hal baru: ':'')+e.title;
 
@@ -1023,7 +1023,7 @@ function renderDay(){
   </div>
   <form class="addform" id="evForm">
     ${ed?'<p class="label" style="color:var(--blue)">Edit pekerjaan</p>':''}
-    <div class="row"><label class="field" style="flex:0 0 132px;min-width:0">Jenis<select id="evType">${Object.entries(TYPES).map(([v,l])=>`<option value="${v}"${ed&&ed.type===v?' selected':''}>${l}</option>`).join('')}</select></label>
+    <div class="row"><label class="field" style="flex:0 0 132px;min-width:0">Jenis<select id="evType">${Object.entries(TYPES).filter(([v])=>v!=='day'||ed?.type==='day').map(([v,l])=>`<option value="${v}"${ed&&ed.type===v?' selected':''}>${l}</option>`).join('')}</select></label>
     <label class="field">Judul<input id="evTitle" required placeholder="mis. Cek stok outlet PDK" value="${esc(ed?.title||'')}"></label></div>
     <label class="field" id="evAuthorWrap"${(ed?ed.type:'work')==='note'?'':' hidden'}>Catatan dari siapa?<input id="evAuthor" list="dlPeople" placeholder="mis. Pak Dwi" value="${esc(ed&&ed.type==='note'?ed.author||'':'')}"></label>
     ${ed?`<label class="field">Tanggal<input type="date" id="evDate" required value="${ed.date}"></label>`:''}
@@ -1041,7 +1041,7 @@ function renderDay(){
 /* ---------- report ---------- */
 function reportText(k){
   const d=parseYmd(k), a=S.att[k]||{}, evs=evByDate()[k]||[];
-  const hol=evs.filter(e=>e.type==='holiday'), work=evs.filter(e=>e.type!=='holiday'&&e.type!=='note'), notes=evs.filter(e=>e.type==='note');
+  const hol=evs.filter(e=>e.type==='holiday'||e.type==='day'), work=evs.filter(e=>e.type!=='holiday'&&e.type!=='day'&&e.type!=='note'), notes=evs.filter(e=>e.type==='note');
   const gs=goalsOf(d.getFullYear(),d.getMonth()+1);
   const L=[`*REPORT HARIAN*`,longDate(k),''];
   if(hol.length)L.push(`Hari raya: ${hol.map(e=>e.title).join(', ')}`,'');
@@ -1086,7 +1086,7 @@ async function renderReport(){
   y+=ch+140;
   const addr=a.in?.addr||a.out?.addr;
   if(addr){x.font=`400 24px ${F}`;x.fillStyle='#6b6b6b';for(const ln of wrapLines(x,addr,W-2*P)){x.fillText(ln,P,y);y+=34}x.fillStyle='#111113';y+=10}
-  const hol=evs.filter(e=>e.type==='holiday'),work=evs.filter(e=>e.type!=='holiday'&&e.type!=='note'),notes=evs.filter(e=>e.type==='note');
+  const hol=evs.filter(e=>e.type==='holiday'||e.type==='day'),work=evs.filter(e=>e.type!=='holiday'&&e.type!=='day'&&e.type!=='note'),notes=evs.filter(e=>e.type==='note');
   if(hol.length){x.fillStyle='#b0413e';x.font=`700 26px ${F}`;x.fillText('Hari raya: '+hol.map(e=>e.title).join(', '),P,y);x.fillStyle='#111113';y+=50}
   x.fillRect(P,y,W-2*P,1);y+=30;lab('Pekerjaan hari ini',y);y+=44;
   x.font=`400 30px ${F}`;
@@ -1999,11 +1999,11 @@ sample=null;
 
 // national holidays + story tasks; the local server does this itself, online the first browser of the day does it
 async function syncHolidays(){
-  try{if(localStorage.getItem('teikoHolSync')===ymd(new Date()))return}catch{}
+  try{if(localStorage.getItem('teikoHolSync2')===ymd(new Date()))return}catch{}
   const h=await (await fetch('/api/holidays')).json();if(!h.events)return;
   const by=a=>Object.fromEntries(a.map(x=>[x.id,x]));
   const ev=by(await store.list('events')),tasks=by(await store.list('tasks')),gone=new Set((await store.list('_dismissed')).map(x=>x.id)),keep=new Set(h.events.map(e=>e.id));
-  for(const e of h.events)if(ev[e.id]?.title!==e.title)await store.put('events',e.id,{date:e.date,type:'holiday',title:e.title,body:'',auto:true,createdAt:0});
+  for(const e of h.events)if(ev[e.id]?.title!==e.title||ev[e.id]?.type!==(e.type||'holiday'))await store.put('events',e.id,{date:e.date,type:e.type||'holiday',title:e.title,body:'',auto:true,createdAt:0});
   for(const k in ev){const y=/^gh-(\d{4})/.exec(k);if((y&&h.years.includes(y[1])&&!keep.has(k))||/^h\d{4}-\d{4}$/.test(k))await store.del('events',k)}
   for(const x of h.tasks){
     const id=x.baseId+'-story',cur=tasks[id],f=x.doc;
@@ -2011,7 +2011,7 @@ async function syncHolidays(){
     if(!cur)await store.put('tasks',id,f);
     else if(cur.status==='open'&&(cur.holidayDate!==x.date||cur.title!==f.title))await store.patch('tasks',id,{title:f.title,due:f.due,forMonth:f.forMonth,holidayDate:f.holidayDate,desc:f.desc});
   }
-  try{localStorage.setItem('teikoHolSync',ymd(new Date()))}catch{}
+  try{localStorage.setItem('teikoHolSync2',ymd(new Date()))}catch{}
   refresh('events');refresh('tasks');
 }
 

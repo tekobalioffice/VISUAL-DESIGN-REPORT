@@ -47,7 +47,7 @@ async function syncHolidays() {
     const h = await getHolidays();
     const ev = (db.events ??= {}), tasks = (db.tasks ??= {}), gone = new Set(db._meta?.dismissed || []), keep = new Set(h.events.map(e => e.id));
     let n = 0, t = 0;
-    for (const e of h.events) if (ev[e.id]?.title !== e.title) { ev[e.id] = { date: e.date, type: 'holiday', title: e.title, body: '', auto: true, createdAt: 0 }; n++; }
+    for (const e of h.events) if (ev[e.id]?.title !== e.title || ev[e.id]?.type !== (e.type || 'holiday')) { ev[e.id] = { date: e.date, type: e.type || 'holiday', title: e.title, body: '', auto: true, createdAt: 0 }; n++; }
     for (const k of Object.keys(ev)) {
       const y = /^gh-(\d{4})/.exec(k);
       if ((y && h.years.includes(y[1]) && !keep.has(k)) || /^h\d{4}-\d{4}$/.test(k)) { delete ev[k]; n++; }
