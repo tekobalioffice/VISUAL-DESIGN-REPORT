@@ -1413,14 +1413,14 @@ $('#tgForm').addEventListener('submit',async()=>{if(!db)return;
   try{tgId?await db.doc('targets/'+tgId).set(d):await db.collection('targets').add(d)}catch(e){fail(e)}});
 $('#tgDel').addEventListener('click',async e=>{const b=e.currentTarget;if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='Yakin hapus?';return}
   $('#tgDlg').close();try{await db.doc('targets/'+tgId).delete()}catch(err){fail(err)}});
-function me(){if(ownerView)return 'Owner';try{return localStorage.getItem('teikoName')||''}catch{return ''}}
-function showMe(){const n=me(),b=$('#whoBtn');if(viewOnly){b.textContent='Masuk';b.dataset.act='login';b.title='Masuk untuk mengubah data';b.dataset.initial='→';return}$('#cmName').readOnly=ownerView;b.textContent=n||'Isi nama';b.dataset.initial=(n||'?').trim().charAt(0).toUpperCase();$('#cmName').value=n}
-function askName(){$('#whoName').value=me();$('#whoName').readOnly=ownerView;$('#nameDlg').showModal()}
+function me(){if(S.myName)return S.myName;if(ownerView)return 'Owner';try{return localStorage.getItem('teikoName')||''}catch{return ''}}
+function showMe(){const n=me(),b=$('#whoBtn');if(viewOnly){b.textContent='Masuk';b.dataset.act='login';b.title='Masuk untuk mengubah data';b.dataset.initial='→';return}$('#cmName').readOnly=ownerView||!!S.myName;b.textContent=n||'Isi nama';b.dataset.initial=(n||'?').trim().charAt(0).toUpperCase();$('#cmName').value=n}
+function askName(){$('#whoName').value=me();$('#whoName').readOnly=ownerView||!!S.myName;$('#nameDlg').showModal()}
 $('#nameForm').addEventListener('submit',()=>{const n=$('#whoName').value.trim();if(!n)return;try{localStorage.setItem('teikoName',n)}catch{}showMe();toast('Halo, '+n)});
 showMe();
 $('#goalView').addEventListener('close',()=>{S.viewGoal=null});
 $('#cmSend').addEventListener('click',async()=>{
-  const text=$('#cmText').value.trim(),author=ownerView?'Owner':$('#cmName').value.trim();
+  const text=$('#cmText').value.trim(),author=S.myName||(ownerView?'Owner':$('#cmName').value.trim());
   if(!text){$('#cmText').focus();return}
   if(!author){toast('Isi nama dulu supaya terlihat siapa yang berkomentar.');$('#cmName').focus();return}
   try{localStorage.setItem('teikoName',author)}catch{}showMe();
@@ -2027,7 +2027,11 @@ $('#loginForm').addEventListener('submit',async e=>{
 if(SB){
   const session=(await SB.auth.getSession()).data.session;viewOnly=!session;showMe();
   if(viewOnly){$('#loginDlg [data-close]').hidden=true;$('#loginDlg').addEventListener('cancel',e=>e.preventDefault());login();return}
-  if(session.user.email===OWNER_EMAIL){ownerView=true;document.body.classList.add('owner');route();showMe()}
+  // display name and role come from Supabase (docs: col 'profiles', id = login email)
+  const {data:pr}=await SB.from('docs').select('data').eq('col','profiles').eq('id',session.user.email).maybeSingle();
+  if(pr?.data?.name)S.myName=pr.data.name;
+  if(session.user.email===OWNER_EMAIL||pr?.data?.role==='owner'){ownerView=true;document.body.classList.add('owner');route()}
+  showMe();
   $('#logoutBtn').hidden=viewOnly;
   $('#logoutBtn').addEventListener('click',async()=>{
     // local sign-out needs no network, so it works on a slow phone connection too
