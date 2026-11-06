@@ -1070,7 +1070,7 @@ async function renderReport(){
   x.fillStyle='#fff';x.fillRect(0,0,W,4000);x.fillStyle='#111113';x.textBaseline='top';
   const lab=(t,yy,col='#6b6b6b')=>{x.font=`600 20px ${F}`;x.fillStyle=col;if('letterSpacing'in x)x.letterSpacing='4px';x.fillText(t.toUpperCase(),P,yy);if('letterSpacing'in x)x.letterSpacing='0px';x.fillStyle='#111113'};
   let y=P;
-  x.font=`700 30px ${F}`;x.fillText('TEIKO',P,y);x.font=`400 20px ${F}`;x.fillStyle='#6b6b6b';x.textAlign='right';x.fillText('REPORT HARIAN',W-P,y+8);x.textAlign='left';x.fillStyle='#111113';
+  x.font=`700 30px ${F}`;x.fillText('TEIKO',P,y);x.font=`400 20px ${F}`;x.fillStyle='#6b6b6b';x.textAlign='right';x.fillText('REPORT',W-P,y+8);x.textAlign='left';x.fillStyle='#111113';
   y+=58;x.fillRect(P,y,W-2*P,2);y+=30;
   lab(d.toLocaleDateString('id-ID',{weekday:'long'}),y);y+=34;
   x.font=`700 54px ${F}`;x.fillText(d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}),P,y);y+=84;
